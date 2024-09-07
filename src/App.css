@@ -13,9 +13,11 @@
 }
 
 
-body {
+body,
+#root {
   background-color: #101417;
-  color: #ada3b9;
+  color: #f6dbc4;
   overflow: hidden;
   position: fixed;
+  width: 100%;
 }

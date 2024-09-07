@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import './WaveText.css'; // Import your CSS file for styling
 
+const WAVE_COLORS = ["#df9ee9", "#dbb54c", "#71c1c1", "#f6dbc4", "#897769", "#9e3420", "#51473f", "#51473f", "#51473f"];
+
 const WaveText = ({ text }) => {
     const containerRef = useRef(null);
     const startTimeRef = useRef(Date.now());
@@ -28,9 +30,9 @@ const WaveText = ({ text }) => {
     }, []);
 
     return (
-        <div className="wave-text" ref={containerRef}>
+        <div className="wave-text mx-auto text-center" ref={containerRef}>
             {text.split('').map((char, index) => (
-                <span key={index}>{char}</span>
+                <span key={index} style={{ color: WAVE_COLORS[index] }}>{char}</span>
             ))}
         </div>
     );

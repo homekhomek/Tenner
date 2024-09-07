@@ -1,17 +1,22 @@
 import React, { useRef, useEffect, useState } from 'react';
+import './TimerBar.css'; // Import your CSS for styling
 
 const TILE_SIZE = 26;
 const BOARD_WIDTH = 12;
 const BOARD_HEIGHT = 20;
+const TIMER_DURATION = 120000;
 
 const PALETTE = ["#20463f", "#4149b1", "#9e3420", "#51473f", "#897769", "#f6dbc4", "#71c1c1", "#dbb54c", "#df9ee9"];
 
-const PlayScreen = () => {
+const PlayScreen = ({ gameOverCallback }) => {
     const [board, setBoard] = useState([]);
     const [selection, setSelection] = useState({});
     const [cornerOne, setCornerOne] = useState({});
     const [cornerTwo, setCornerTwo] = useState({});
+    const [timerBarWidth, setTimerBarWidth] = useState('100%');
+    const [startTime, setStartTime] = useState(Date.now())
     const [score, setScore] = useState(0);
+
     const distMethod = (weights) => {
 
         // Calculate the total weight
@@ -30,7 +35,33 @@ const PlayScreen = () => {
         }
     }
 
-    const dragStart = (event) => {
+    const timerDone = () => {
+        gameOverCallback(score);
+    };
+
+    useEffect(() => {
+        const endTime = startTime + TIMER_DURATION;
+        const updateWidth = () => {
+            const now = Date.now();
+            const elapsedTime = now - startTime;
+            const remainingTime = endTime - now;
+
+            if (remainingTime <= 0) {
+                setTimerBarWidth('0%');
+                timerDone();
+            } else {
+                const newWidth = (remainingTime / TIMER_DURATION) * 100;
+                setTimerBarWidth(`${newWidth}%`);
+
+                requestAnimationFrame(updateWidth);
+            }
+        };
+
+        updateWidth();
+
+    }, []);
+
+    const getDragCoords = (event) => {
         const element = event.currentTarget; // The element being touched
         const rect = element.getBoundingClientRect(); // Get the element's position
 
@@ -38,19 +69,20 @@ const PlayScreen = () => {
         const touch = event.touches[0]; // Event.touches[0] is the first touch point
         const offsetX = touch.clientX - rect.left; // Calculate X offset
         const offsetY = touch.clientY - rect.top;  // Calculate Y offset
+        return { offsetX, offsetY }
+    }
+
+    const dragStart = (event) => {
+        const { offsetX, offsetY } = getDragCoords(event);
+
 
         setCornerTwo({ x: Math.floor(offsetX / TILE_SIZE), y: Math.floor(offsetY / TILE_SIZE) });
         setCornerOne({ x: Math.floor(offsetX / TILE_SIZE), y: Math.floor(offsetY / TILE_SIZE) });
     }
 
     const continueDrag = (event) => {
-        const element = event.currentTarget; // The element being touched
-        const rect = element.getBoundingClientRect(); // Get the element's position
+        const { offsetX, offsetY } = getDragCoords(event);
 
-        // Access the first touch point
-        const touch = event.touches[0]; // Event.touches[0] is the first touch point
-        const offsetX = touch.clientX - rect.left; // Calculate X offset
-        const offsetY = touch.clientY - rect.top;  // Calculate Y offset
 
         setCornerTwo({ x: Math.floor(offsetX / TILE_SIZE), y: Math.floor(offsetY / TILE_SIZE) });
 
@@ -59,18 +91,10 @@ const PlayScreen = () => {
     useEffect(() => {
 
         if (!cornerOne || !cornerTwo) {
-            console.log(cornerOne, cornerTwo)
             setSelection({});
 
             return;
         }
-
-        console.log({
-            minX: Math.min(cornerOne.x, cornerTwo.x),
-            minY: Math.min(cornerOne.y, cornerTwo.y),
-            maxX: Math.min(BOARD_WIDTH - 1, Math.max(cornerOne.x, cornerTwo.x)),
-            maxY: Math.min(BOARD_HEIGHT - 1, Math.max(cornerOne.y, cornerTwo.y)),
-        });
 
         setSelection({
             minX: Math.min(cornerOne.x, cornerTwo.x),
@@ -83,19 +107,11 @@ const PlayScreen = () => {
     }, [cornerOne, cornerTwo])
 
     const dragEnd = (event) => {
-        const touch = event.changedTouches[0];
-
-        // Get touch coordinates
-        const touchX = touch.clientX;
-        const touchY = touch.clientY;
-
-        // Get element position
-        const element = event.currentTarget; // The element being touched
-        const rect = element.getBoundingClientRect();
+        const rect = event.currentTarget.getBoundingClientRect();
 
         // Calculate relative position
-        const relativeX = Math.floor((touchX - rect.left) / TILE_SIZE) + 1;
-        const relativeY = Math.floor((touchY - rect.top) / TILE_SIZE) + 1;
+        const relativeX = Math.floor((event.changedTouches[0].clientX - rect.left) / TILE_SIZE) + 1;
+        const relativeY = Math.floor((event.changedTouches[0].clientY - rect.top) / TILE_SIZE) + 1;
 
         var minScoreX = 999;
         var minScoreY = 999;
@@ -120,7 +136,7 @@ const PlayScreen = () => {
             return tot;
         }, 0);
 
-        if (total == 10) {
+        if (total % 10 == 0) {
             var newBoard = board.filter((cur) => {
                 if (cur.x >= selection.minX && cur.x <= selection.maxX &&
                     cur.y >= selection.minY && cur.y <= selection.maxY) {
@@ -130,7 +146,7 @@ const PlayScreen = () => {
             });
             setBoard(newBoard);
 
-            setScore(score + ((maxScoreY - minScoreY + 1) * (maxScoreX - minScoreX + 1)));
+            setScore(score + ((maxScoreY - minScoreY + 1) * (maxScoreX - minScoreX + 1) * (total / 10)));
         }
 
 
@@ -147,7 +163,7 @@ const PlayScreen = () => {
                 newBoard.push({
                     x: i,
                     y: j,
-                    value: distMethod([1.2, 1.3, 1.25, 1.1, 1, 1, 1, .95, .90])
+                    value: distMethod([1.2, 1.3, 1.25, 1.1, 1, 1, .95, .9, .85])
                 })
             }
         }
@@ -160,9 +176,9 @@ const PlayScreen = () => {
         generateBoard();
     }, [])
 
-    return <div>
-        <div className='font-chronotype text-[40px]'>Score: {score}</div>
-        <div className={`relative ml-5`}
+    return <div className='mx-auto' style={{ width: TILE_SIZE * BOARD_WIDTH }}>
+        <div className='font-chronotype text-[32px] leading-[20px]'>Score: {score}</div>
+        <div className={`relative`}
             style={{
                 width: TILE_SIZE * BOARD_WIDTH,
                 height: TILE_SIZE * BOARD_HEIGHT
@@ -170,11 +186,11 @@ const PlayScreen = () => {
             onTouchStart={(evt) => { dragStart(evt) }}
             onTouchMove={(evt) => { continueDrag(evt) }}
             onTouchEnd={(evt) => { dragEnd(evt) }}
+
         >
-            {selection && selection.minX != undefined && (
+            {selection && selection.minX != undefined && !isNaN(selection.minX) && (
                 <div className='absolute border-2 border-[#f6dbc4]'
                     style={{
-                        transition: "transition: width 0.125s ease, height 0.125s ease;",
                         width: (selection.maxX - selection.minX + 1) * TILE_SIZE,
                         height: (selection.maxY - selection.minY + 1) * TILE_SIZE,
                         left: selection.minX * TILE_SIZE,
@@ -191,7 +207,11 @@ const PlayScreen = () => {
                 ))
             }
         </div >
-    </div>;
+
+        <div className="timer-bar-container mt-3">
+            <div className="timer-bar" style={{ width: timerBarWidth }}></div>
+        </div>
+    </div>
 };
 
 export default PlayScreen;
