@@ -147,7 +147,7 @@ const PlayScreen = ({ gameOverCallback, isTouchDevice }) => {
             return tot;
         }, 0);
 
-        if (total % 10 == 0) {
+        if (total == 10) {
             var newBoard = board.filter((cur) => {
                 if (cur.x >= selection.minX && cur.x <= selection.maxX &&
                     cur.y >= selection.minY && cur.y <= selection.maxY) {

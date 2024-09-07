@@ -74,11 +74,11 @@ function App() {
           <TypeAnimation
             sequence={[
               1500,
-              'Select multiples of tens to score points!',
+              'Select groups of ten to score points!',
               3000,
-              'Score as many multiples before time runs out!',
+              'Score as many tens before time runs out!',
               3000,
-              'Higher multiples will score more points (20 > 10)',
+              'Bigger boxes will give more points!',
               3000,
             ]}
             wrapper="span"
