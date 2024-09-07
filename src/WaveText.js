@@ -3,7 +3,7 @@ import './WaveText.css'; // Import your CSS file for styling
 
 const WAVE_COLORS = ["#df9ee9", "#dbb54c", "#71c1c1", "#f6dbc4", "#897769", "#9e3420", "#51473f", "#51473f", "#51473f"];
 
-const WaveText = ({ text }) => {
+const WaveText = ({ text, colored = false, size = 60 }) => {
     const containerRef = useRef(null);
     const startTimeRef = useRef(Date.now());
 
@@ -12,6 +12,9 @@ const WaveText = ({ text }) => {
             const now = Date.now();
             const time = (now - startTimeRef.current) / 300; // seconds
             const container = containerRef.current;
+            if (!container)
+                return;
+
             const spans = container.querySelectorAll('span');
 
             spans.forEach((span, index) => {
@@ -32,7 +35,7 @@ const WaveText = ({ text }) => {
     return (
         <div className="wave-text mx-auto text-center" ref={containerRef}>
             {text.split('').map((char, index) => (
-                <span key={index} style={{ color: WAVE_COLORS[index] }}>{char}</span>
+                <span key={index} style={{ color: colored ? WAVE_COLORS[index] : undefined, fontSize: size + "px" }}>{char}</span>
             ))}
         </div>
     );

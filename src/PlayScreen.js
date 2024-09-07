@@ -8,7 +8,7 @@ const TIMER_DURATION = 120000;
 
 const PALETTE = ["#20463f", "#4149b1", "#9e3420", "#51473f", "#897769", "#f6dbc4", "#71c1c1", "#dbb54c", "#df9ee9"];
 
-const PlayScreen = ({ gameOverCallback }) => {
+const PlayScreen = ({ gameOverCallback, isTouchDevice }) => {
     const [board, setBoard] = useState([]);
     const [selection, setSelection] = useState({});
     const [cornerOne, setCornerOne] = useState({});
@@ -35,9 +35,6 @@ const PlayScreen = ({ gameOverCallback }) => {
         }
     }
 
-    const timerDone = () => {
-        gameOverCallback(score);
-    };
 
     useEffect(() => {
         const endTime = startTime + TIMER_DURATION;
@@ -48,7 +45,7 @@ const PlayScreen = ({ gameOverCallback }) => {
 
             if (remainingTime <= 0) {
                 setTimerBarWidth('0%');
-                timerDone();
+                gameOverCallback(score);
             } else {
                 const newWidth = (remainingTime / TIMER_DURATION) * 100;
                 setTimerBarWidth(`${newWidth}%`);
@@ -59,7 +56,7 @@ const PlayScreen = ({ gameOverCallback }) => {
 
         updateWidth();
 
-    }, []);
+    }, [score]);
 
     const getDragCoords = (event) => {
         const element = event.currentTarget; // The element being touched
@@ -72,46 +69,60 @@ const PlayScreen = ({ gameOverCallback }) => {
         return { offsetX, offsetY }
     }
 
-    const dragStart = (event) => {
+    const mouseStart = (event) => {
+        // Get the target element (the one where the event handler is attached)
+        const target = event.currentTarget;
+
+        // Get the element's bounding rectangle
+        const rect = target.getBoundingClientRect();
+
+        // Calculate the offset relative to the element's upper left corner
+        const offsetX = event.clientX - rect.left;
+        const offsetY = event.clientY - rect.top;
+
+        dragStart(offsetX, offsetY);
+    }
+
+    const continueMouse = (event) => {
+        // Get the target element (the one where the event handler is attached)
+        const target = event.currentTarget;
+
+        // Get the element's bounding rectangle
+        const rect = target.getBoundingClientRect();
+
+        // Calculate the offset relative to the element's upper left corner
+        const offsetX = event.clientX - rect.left;
+        const offsetY = event.clientY - rect.top;
+
+        continueDrag(offsetX, offsetY);
+    }
+
+    const touchStart = (event) => {
         const { offsetX, offsetY } = getDragCoords(event);
 
+        dragStart(offsetX, offsetY)
+    }
 
+    const continueTouch = (event) => {
+        const { offsetX, offsetY } = getDragCoords(event);
+
+        continueDrag(offsetX, offsetY)
+    }
+
+    const touchEnd = (event) => { dragEnd() }
+
+    const dragStart = (offsetX, offsetY) => {
         setCornerTwo({ x: Math.floor(offsetX / TILE_SIZE), y: Math.floor(offsetY / TILE_SIZE) });
         setCornerOne({ x: Math.floor(offsetX / TILE_SIZE), y: Math.floor(offsetY / TILE_SIZE) });
     }
 
-    const continueDrag = (event) => {
-        const { offsetX, offsetY } = getDragCoords(event);
-
-
+    const continueDrag = (offsetX, offsetY) => {
         setCornerTwo({ x: Math.floor(offsetX / TILE_SIZE), y: Math.floor(offsetY / TILE_SIZE) });
-
     }
 
-    useEffect(() => {
-
-        if (!cornerOne || !cornerTwo) {
-            setSelection({});
-
-            return;
-        }
-
-        setSelection({
-            minX: Math.min(cornerOne.x, cornerTwo.x),
-            minY: Math.min(cornerOne.y, cornerTwo.y),
-            maxX: Math.min(BOARD_WIDTH - 1, Math.max(cornerOne.x, cornerTwo.x)),
-            maxY: Math.min(BOARD_HEIGHT - 1, Math.max(cornerOne.y, cornerTwo.y)),
-        })
 
 
-    }, [cornerOne, cornerTwo])
-
-    const dragEnd = (event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-
-        // Calculate relative position
-        const relativeX = Math.floor((event.changedTouches[0].clientX - rect.left) / TILE_SIZE) + 1;
-        const relativeY = Math.floor((event.changedTouches[0].clientY - rect.top) / TILE_SIZE) + 1;
+    const dragEnd = () => {
 
         var minScoreX = 999;
         var minScoreY = 999;
@@ -149,11 +160,28 @@ const PlayScreen = ({ gameOverCallback }) => {
             setScore(score + ((maxScoreY - minScoreY + 1) * (maxScoreX - minScoreX + 1) * (total / 10)));
         }
 
-
         setCornerOne(null);
         setCornerTwo(null);
-
     }
+
+    useEffect(() => {
+
+        if (!cornerOne || !cornerTwo) {
+            setSelection({});
+
+            return;
+        }
+
+        setSelection({
+            minX: Math.min(cornerOne.x, cornerTwo.x),
+            minY: Math.min(cornerOne.y, cornerTwo.y),
+            maxX: Math.min(BOARD_WIDTH - 1, Math.max(cornerOne.x, cornerTwo.x)),
+            maxY: Math.min(BOARD_HEIGHT - 1, Math.max(cornerOne.y, cornerTwo.y)),
+        })
+
+
+    }, [cornerOne, cornerTwo])
+
 
     const generateBoard = () => {
         var newBoard = [];
@@ -183,9 +211,12 @@ const PlayScreen = ({ gameOverCallback }) => {
                 width: TILE_SIZE * BOARD_WIDTH,
                 height: TILE_SIZE * BOARD_HEIGHT
             }}
-            onTouchStart={(evt) => { dragStart(evt) }}
-            onTouchMove={(evt) => { continueDrag(evt) }}
-            onTouchEnd={(evt) => { dragEnd(evt) }}
+            onTouchStart={isTouchDevice ? touchStart : undefined}
+            onTouchMove={isTouchDevice ? continueTouch : undefined}
+            onTouchEnd={isTouchDevice ? touchEnd : undefined}
+            onMouseDown={!isTouchDevice ? mouseStart : undefined}
+            onMouseMove={!isTouchDevice ? continueMouse : undefined}
+            onMouseUp={!isTouchDevice ? touchEnd : undefined}
 
         >
             {selection && selection.minX != undefined && !isNaN(selection.minX) && (
