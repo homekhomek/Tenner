@@ -20,4 +20,5 @@ body,
   overflow: hidden;
   position: fixed;
   width: 100%;
+  overscroll-behavior-y: contain;
 }
